@@ -1,0 +1,12 @@
+[package]
+name = "high-performance-collisions"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+easy-gpu = "0.5.5"
+winit = "0.30.13"
+pollster = "0.4.0"
+bytemuck = "1.25.0"
+rayon = "1.12.0"
+parking_lot = "0.12.5"
