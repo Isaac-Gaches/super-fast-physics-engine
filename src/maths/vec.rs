@@ -12,9 +12,6 @@ impl Vec2 {
     pub fn new(x: f32, y: f32) -> Self {
         Vec2 { x, y }
     }
-    pub fn length_sqr(&self) -> f32 {
-        self.x * self.x + self.y * self.y
-    }
 }
 
 impl Div for Vec2 {

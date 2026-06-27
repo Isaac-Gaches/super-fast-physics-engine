@@ -28,8 +28,3 @@ impl Balls{
         self.colour.push(colour);
     }
 }
-
-pub struct UnsafeBalls(pub *mut Balls);
-
-unsafe impl Send for UnsafeBalls {}
-unsafe impl Sync for UnsafeBalls {}

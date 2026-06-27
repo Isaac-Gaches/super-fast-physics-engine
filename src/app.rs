@@ -43,12 +43,12 @@ impl ApplicationHandler for App{
         let renderer = self.renderer.as_mut().unwrap();
 
         match event {
-            WindowEvent::KeyboardInput { event, .. } => {
+            WindowEvent::KeyboardInput { event: _, .. } => {
             }
-            WindowEvent::MouseInput { button,state,..} =>{
+            WindowEvent::MouseInput { button: _,state: _,..} =>{
 
             }
-            WindowEvent::CursorMoved {position,..} =>{
+            WindowEvent::CursorMoved {position: _,..} =>{
 
             }
             WindowEvent::CloseRequested => {
@@ -58,14 +58,11 @@ impl ApplicationHandler for App{
                 renderer.resize(size);
             }
             WindowEvent::RedrawRequested => {
-                #[cfg(debug_assertions)]
-                {
-                    self.frames += 1;
-                    if self.timer.elapsed().as_secs() >= 1 {
-                        println!("fps {}", self.frames);
-                        self.timer = Instant::now();
-                        self.frames = 0;
-                    }
+                self.frames += 1;
+                if self.timer.elapsed().as_secs() >= 1 {
+                    println!("fps {}", self.frames);
+                    self.timer = Instant::now();
+                    self.frames = 0;
                 }
 
                 self.world.step();

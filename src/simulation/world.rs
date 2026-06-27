@@ -1,6 +1,4 @@
-use std::sync::atomic::AtomicI32;
 use std::time::Instant;
-use rayon::prelude::*;
 use crate::maths::vec::Vec2;
 use crate::render::{Colour};
 use crate::simulation::balls::Balls;
@@ -20,11 +18,11 @@ impl World {
         x: 0.,
         y: -150.0
     };
-    const MAX_BALLS: usize = 72000;
+    const MAX_BALLS: usize = 100000;
     pub fn new() -> Self {
         Self{
             balls: Balls::new(Self::MAX_BALLS),
-            grid: Grid::new(256,200,2.0,Self::MAX_BALLS),
+            grid: Grid::new(288,288,2.0,Self::MAX_BALLS),
             colour_timer: Instant::now(),
         }
     }
@@ -34,8 +32,8 @@ impl World {
             let t = self.colour_timer.elapsed().as_secs_f32()/2.0;
             for i in 0..50{
                 self.balls.add_ball(
-                    Vec2::new(5.0 + i as f32 * 0.1,290.0 + i as f32 * 2.0),
-                    Vec2::new(0.4,0.1),
+                    Vec2::new(5.0 + i as f32 * 0.1,400.0 + i as f32 * 2.0),
+                    Vec2::new(0.3,0.1),
                     Colour::new((t.sin()+1.0)/2.0,(t.cos()+1.)/2.0,1.0-(t.cos()+1.0)/2.0)
                 );
             }

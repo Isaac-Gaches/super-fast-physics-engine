@@ -11,35 +11,31 @@ pub fn compute_cell_ids(
     cell_size: f32,
     particle_cell: &mut [u32],
 ) {
-    let x = &balls.x;
-    let y = &balls.y;
-
     let inv = 1.0 / cell_size;
-    let gw = grid_w as u32;
 
     #[cfg(target_arch = "x86_64")]
     {
         if is_x86_feature_detected!("avx2") {
             unsafe {
                 compute_cell_ids_avx2(
-                    x,
-                    y,
+                    &balls.x,
+                    &balls.y,
                     inv,
-                    gw,
+                    grid_w as u32,
                     particle_cell,
                 );
-                return;
             }
+            return;
         }
     }
 
     particle_cell
         .par_iter_mut()
         .enumerate()
-        .for_each(|(i, cell)| {
-            let cx = (x[i] * inv) as u32;
-            let cy = (y[i] * inv) as u32;
-            *cell = cx + cy * gw;
+        .for_each(|(i, dst)| {
+            let cx = (balls.x[i] * inv) as u32;
+            let cy = (balls.y[i] * inv) as u32;
+            *dst = cx + cy * grid_w as u32;
         });
 }
 
@@ -56,56 +52,49 @@ unsafe fn compute_cell_ids_avx2(
     let inv_v = _mm256_set1_ps(inv);
     let gw_v = _mm256_set1_epi32(gw as i32);
 
-    let chunks = n / 8;
+    let mut i = 0;
 
-    out.par_chunks_mut(8)
-        .enumerate()
-        .take(chunks)
-        .for_each(|(chunk_idx, dst)| {
-            unsafe {
-                let i = chunk_idx * 8;
+    while i + 8 <= n {
+        let px = _mm256_loadu_ps(x.as_ptr().add(i));
+        let py = _mm256_loadu_ps(y.as_ptr().add(i));
 
-                let px = _mm256_loadu_ps(x.as_ptr().add(i));
-                let py = _mm256_loadu_ps(y.as_ptr().add(i));
+        let cx = _mm256_cvttps_epi32(_mm256_mul_ps(px, inv_v));
+        let cy = _mm256_cvttps_epi32(_mm256_mul_ps(py, inv_v));
 
-                let cx = _mm256_cvttps_epi32(_mm256_mul_ps(px, inv_v));
-                let cy = _mm256_cvttps_epi32(_mm256_mul_ps(py, inv_v));
+        let cell = _mm256_add_epi32(cx, _mm256_mullo_epi32(cy, gw_v));
 
-                let row = _mm256_mullo_epi32(cy, gw_v);
+        _mm256_storeu_si256(out.as_mut_ptr().add(i) as *mut __m256i, cell, );
 
-                let cell = _mm256_add_epi32(cx, row);
+        i += 8;
+    }
 
-                _mm256_storeu_si256(dst.as_mut_ptr() as *mut __m256i, cell, );
-            }
-        });
-
-    for i in (chunks * 8)..n {
+    while i < n {
         let cx = (x[i] * inv) as u32;
         let cy = (y[i] * inv) as u32;
         out[i] = cx + cy * gw;
+        i += 1;
     }
 }
 
-pub fn build_histogram(particle_cell: &[u32], cell_count: &mut [u8]) {
+pub fn build_histogram(
+    particle_cell: &[u32],
+    cell_count: &mut [u8],
+) {
     cell_count.fill(0);
 
-    let cell_len = cell_count.len();
-    const CHUNK_SIZE: usize = 8192;
+    let partials: Vec<_> = particle_cell
+        .par_chunks(16384)
+        .map(|chunk| {
+            let mut local = vec![0u8; cell_count.len()];
 
-    let partials: Vec<Vec<u8>> = particle_cell
-        .par_chunks(CHUNK_SIZE)
-        .map_init(
-            || vec![0; cell_len],
-            |hist, chunk| {
-                hist.fill(0);
-
-                for &cell in chunk {
-                    hist[cell as usize] += 1;
+            for &cell in chunk {
+                unsafe {
+                    *local.get_unchecked_mut(cell as usize) += 1;
                 }
+            }
 
-                hist.clone()
-            },
-        )
+            local
+        })
         .collect();
 
     for hist in partials {
@@ -115,8 +104,12 @@ pub fn build_histogram(particle_cell: &[u32], cell_count: &mut [u8]) {
     }
 }
 
-pub fn build_prefix_sum(cell_count: &[u8], cell_start: &mut [u32]) {
+pub fn build_prefix_sum(
+    cell_count: &[u8],
+    cell_start: &mut [u32],
+) {
     let mut sum = 0;
+
     for (dst, &count) in cell_start.iter_mut().zip(cell_count) {
         *dst = sum;
         sum += count as u32;
@@ -127,19 +120,28 @@ pub fn scatter_particles(
     particle_cell: &[u32],
     particle_ids: &mut [u32],
     cell_start: &[u32],
-    cursor: &mut Vec<u32>,
+    cursor: &mut [u32],
 ) {
     cursor.copy_from_slice(cell_start);
 
-    for i in 0..particle_cell.len() {
-        let cell = particle_cell[i] as usize;
-        let dst = cursor[cell] as usize;
-        cursor[cell] += 1;
-        particle_ids[dst] = i as u32;
+    for (i, &cell) in particle_cell.iter().enumerate() {
+        unsafe {
+            let c = cursor.get_unchecked_mut(cell as usize);
+
+            let dst = *c as usize;
+
+            *particle_ids.get_unchecked_mut(dst) =
+                i as u32;
+
+            *c += 1;
+        }
     }
 }
 
-pub fn build_grid(balls: &Balls, grid: &mut Grid) {
+pub fn build_grid(
+    balls: &Balls,
+    grid: &mut Grid,
+) {
     let n = balls.x.len();
 
     if grid.particle_cell.len() != n {
@@ -159,7 +161,10 @@ pub fn build_grid(balls: &Balls, grid: &mut Grid) {
         &mut grid.cell_count,
     );
 
-    build_prefix_sum(&grid.cell_count, &mut grid.cell_start);
+    build_prefix_sum(
+        &grid.cell_count,
+        &mut grid.cell_start,
+    );
 
     scatter_particles(
         &grid.particle_cell,

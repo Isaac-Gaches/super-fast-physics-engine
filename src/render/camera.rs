@@ -40,8 +40,8 @@ struct View{
 impl View{
     fn new(aspect:f32) -> Self{
         Self{
-            position: Vec2::new(256., 200.0),
-            zoom: 0.0025,
+            position: Vec2::new(288., 288.0),
+            zoom: 0.0018,
             aspect,
         }
     }

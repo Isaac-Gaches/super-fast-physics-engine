@@ -1,10 +1,9 @@
 use std::sync::Arc;
-use easy_gpu::assets::{render_uniform, Buffer, BufferLayout, BufferUsages, GpuInstance, GpuVertex, Material, MaterialBuilder, Mesh, RenderPipeline, RenderPipelineBuilder};
+use easy_gpu::assets::{render_uniform, Buffer, BufferLayout, BufferUsages, GpuVertex, Material, MaterialBuilder, Mesh, RenderPipelineBuilder};
 use easy_gpu::assets_manager::Handle;
 use easy_gpu::wgpu::{TextureFormat, VertexFormat, VertexStepMode};
 use winit::dpi::PhysicalSize;
 use winit::window::Window;
-use crate::maths::vec::Vec2;
 use crate::render::{Colour};
 use crate::render::camera::Camera;
 use crate::render::vertex::Vertex;
