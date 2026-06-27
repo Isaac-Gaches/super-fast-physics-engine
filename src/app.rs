@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::time::Instant;
 use winit::application::ApplicationHandler;
 use winit::event::WindowEvent;
 use winit::event_loop::ActiveEventLoop;
@@ -10,6 +11,8 @@ pub struct App{
     window: Option<Arc<Window>>,
     renderer: Option<Renderer>,
     world: World,
+    frames: u32,
+    timer: Instant,
 }
 
 impl App{
@@ -18,6 +21,8 @@ impl App{
             window: None,
             renderer: None,
             world: World::new(),
+            frames: 0,
+            timer: Instant::now(),
         }
     }
 }
@@ -53,6 +58,16 @@ impl ApplicationHandler for App{
                 renderer.resize(size);
             }
             WindowEvent::RedrawRequested => {
+                #[cfg(debug_assertions)]
+                {
+                    self.frames += 1;
+                    if self.timer.elapsed().as_secs() >= 1 {
+                        println!("fps {}", self.frames);
+                        self.timer = Instant::now();
+                        self.frames = 0;
+                    }
+                }
+
                 self.world.step();
 
                 renderer.upload_balls(self.world.extract());

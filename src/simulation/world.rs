@@ -31,7 +31,7 @@ impl World {
         if self.balls.x.len() < Self::MAX_BALLS {
            for i in 0..50{
                self.balls.add_ball(
-                   Vec2::new(5.0 + i as f32 * 0.1,300.0 + i as f32 * 2.0),
+                   Vec2::new(5.0 + i as f32 * 0.1,290.0 + i as f32 * 2.0),
                    Vec2::new(0.4,0.1),
                    Colour::new(0.0,i as f32 * 0.02,1.)
                );

@@ -41,7 +41,7 @@ impl View{
     fn new(aspect:f32) -> Self{
         Self{
             position: Vec2::new(256., 200.0),
-            zoom: 0.002,
+            zoom: 0.0025,
             aspect,
         }
     }
