@@ -5,12 +5,13 @@ use rayon::prelude::*;
 use std::cell::UnsafeCell;
 
 const STIFFNESS: f32 = 0.4;
+const PUSH_SCALE:f32 = 0.5 * STIFFNESS;
 const MAX_OVERLAP: f32 = 0.6;
 
 const COLLISION_DIST_SQ: f32 = 4.0;
 const MIN_DIST_SQ: f32 = 1e-10;
 
-const STRIPE_WIDTH: usize = 8;
+const STRIPE_WIDTH: usize = 16;
 
 const NEIGHBOURS: [(i32, i32); 5] = [
     (0, 0),
@@ -73,7 +74,6 @@ unsafe fn process_stripe(
             let cell = cx + cy * grid_w;
 
             let a_start = *grid.cell_start.get_unchecked(cell) as usize;
-
             let a_count = *grid.cell_count.get_unchecked(cell) as usize;
 
             if a_count == 0 {
@@ -149,9 +149,9 @@ unsafe fn collide_cells(
                 continue;
             }
 
-            let dist = dist_sq.sqrt();
-            let overlap = (2.0 - dist).min(MAX_OVERLAP);
-            let push = overlap * (0.5 * STIFFNESS / dist);
+            let inv_dist = dist_sq.sqrt().recip();
+            let overlap = (2.0 - dist_sq * inv_dist).min(MAX_OVERLAP);
+            let push = overlap * PUSH_SCALE * inv_dist;
 
             let px = dx * push;
             let py = dy * push;

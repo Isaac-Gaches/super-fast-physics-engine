@@ -8,6 +8,9 @@ mod app;
 mod maths;
 
 fn main() -> Result<(), EventLoopError> {
+    #[cfg(debug_assertions)]
+    println!("{}", is_x86_feature_detected!("avx2"));
+
     let event_loop = EventLoop::new()?;
     let mut app = App::new();
 
